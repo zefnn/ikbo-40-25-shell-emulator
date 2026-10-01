@@ -1,0 +1,3 @@
+vfs_path: examples/vfs.csv
+log_path: examples/shellemu_log.xml
+script_path: examples/startup.txt

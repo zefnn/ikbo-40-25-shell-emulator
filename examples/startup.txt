@@ -1,0 +1,4 @@
+ls -la /tmp
+cd "My Documents"
+not-a-real-command
+ls "unterminated
