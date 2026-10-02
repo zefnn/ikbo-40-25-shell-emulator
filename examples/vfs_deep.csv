@@ -1,0 +1,7 @@
+path,type,content
+level1,dir,
+level1/shallow.txt,file,0KTQsNC50Lsg0L3QsCDQv9C10YDQstC+0Lwg0YPRgNC+0LLQvdC1Lgo=
+level1/level2,dir,
+level1/level2/mid.txt,file,0KTQsNC50Lsg0L3QsCDQstGC0L7RgNC+0Lwg0YPRgNC+0LLQvdC1Lgo=
+level1/level2/level3,dir,
+level1/level2/level3/deep.txt,file,0KTQsNC50Lsg0L3QsCDRgtGA0LXRgtGM0LXQvCDRg9GA0L7QstC90LUg0LLQu9C+0LbQtdC90L3QvtGB0YLQuC4K

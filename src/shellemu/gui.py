@@ -5,7 +5,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import scrolledtext
 
-from . import repl
+from . import repl, vfs
 
 DEFAULT_VFS_NAME = "(не задана)"
 
@@ -13,10 +13,11 @@ DEFAULT_VFS_NAME = "(не задана)"
 class ReplWindow(tk.Tk):
     """Main window: a scrollback pane plus a single input line."""
 
-    def __init__(self, config, config_error, logger):
+    def __init__(self, config, config_error, vfs_root, vfs_error, logger):
         """Build the window for the given resolved configuration."""
         super().__init__()
         self._logger = logger
+        self._vfs_root = vfs_root
         vfs_name = (
             os.path.basename(config.vfs_path)
             if config.vfs_path
@@ -25,7 +26,7 @@ class ReplWindow(tk.Tk):
         self.title(f"Эмулятор — VFS: {vfs_name}")
         self._prompt = "VFS:~$ "
         self._build_widgets()
-        self._print_startup_info(config, config_error)
+        self._print_startup_info(config, config_error, vfs_error)
         self._print(self._prompt, newline=False)
         if config.script_path:
             self._run_startup_script(config.script_path)
@@ -41,8 +42,8 @@ class ReplWindow(tk.Tk):
         self.entry.bind("<Return>", self._on_submit)
         self.entry.focus_set()
 
-    def _print_startup_info(self, config, config_error):
-        """Echo the resolved configuration values and any load error."""
+    def _print_startup_info(self, config, config_error, vfs_error):
+        """Echo the resolved configuration, VFS and any load errors."""
         for key, value in [
             ("vfs_path", config.vfs_path),
             ("log_path", config.log_path),
@@ -52,6 +53,11 @@ class ReplWindow(tk.Tk):
             self._print(f"[config] {key} = {value}")
         if config_error:
             self._print(f"config error: {config_error}")
+        if self._vfs_root is not None:
+            files, dirs = vfs.count_entries(self._vfs_root)
+            self._print(f"[vfs] loaded: {files} files, {dirs} directories")
+        if vfs_error:
+            self._print(f"VFS error: {vfs_error}")
 
     def _run_startup_script(self, path):
         """Replay every line of the startup script, then resume input."""

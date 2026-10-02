@@ -3,14 +3,24 @@
 from .config import parse_cli_args, resolve_config
 from .eventlog import EventLog
 from .gui import ReplWindow
+from .vfs import VfsError, load_vfs
 
 
 def main():
-    """Resolve configuration, then create and run the REPL window."""
+    """Resolve config, load the VFS, then create and run the window."""
     cli_args = parse_cli_args()
     config, config_error = resolve_config(cli_args)
     logger = EventLog(config.log_path)
-    app = ReplWindow(config, config_error, logger)
+
+    vfs_root = None
+    vfs_error = None
+    if config.vfs_path:
+        try:
+            vfs_root = load_vfs(config.vfs_path)
+        except VfsError as exc:
+            vfs_error = str(exc)
+
+    app = ReplWindow(config, config_error, vfs_root, vfs_error, logger)
     app.mainloop()
 
 

@@ -47,6 +47,7 @@ class _FakeLogger:
         self.calls = []
 
     def log(self, name, args):
+        """Record one (name, args) call instead of writing to disk."""
         self.calls.append((name, args))
 
 
