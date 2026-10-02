@@ -40,7 +40,7 @@ def test_run_lines_stops_at_exit():
     assert results[-1][1] is None
 
 
-class _FakeLogger:
+class FakeLogger:
     """Records logged calls in memory instead of writing real XML."""
 
     def __init__(self):
@@ -52,12 +52,12 @@ class _FakeLogger:
 
 
 def test_submit_logs_successfully_parsed_commands():
-    logger = _FakeLogger()
+    logger = FakeLogger()
     repl.submit("ls -la", logger=logger)
     assert logger.calls == [("ls", ["-la"])]
 
 
 def test_submit_does_not_log_blank_lines():
-    logger = _FakeLogger()
+    logger = FakeLogger()
     repl.submit("   ", logger=logger)
     assert logger.calls == []

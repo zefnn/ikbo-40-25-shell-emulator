@@ -1,6 +1,6 @@
 """Unit tests for shellemu.eventlog."""
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as et
 
 from shellemu.eventlog import EventLog
 
@@ -10,7 +10,7 @@ def test_log_creates_file_with_event(tmp_path):
     logger = EventLog(str(log_path))
     logger.log("ls", ["-la"])
 
-    root = ET.parse(log_path).getroot()
+    root = et.parse(log_path).getroot()
     events = root.findall("event")
     assert len(events) == 1
     assert events[0].find("command").text == "ls"
@@ -24,7 +24,7 @@ def test_log_appends_across_instances(tmp_path):
     EventLog(str(log_path)).log("ls", [])
     EventLog(str(log_path)).log("cd", ["/tmp"])
 
-    root = ET.parse(log_path).getroot()
+    root = et.parse(log_path).getroot()
     commands = [event.find("command").text for event in root.findall("event")]
     assert commands == ["ls", "cd"]
 
