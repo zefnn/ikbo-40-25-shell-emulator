@@ -1,11 +1,11 @@
 """File-reading commands: ``cat`` and ``tail``."""
 
 from . import vfs
+from .arguments import DASH, split_flags
 from .errors import CommandError
 from .formatting import join_block
 from .session import lookup_message
 
-DASH = "-"
 LINES_FLAG = "-n"
 DEFAULT_TAIL_LINES = 10
 SINGLE_FILE = 1
@@ -13,7 +13,7 @@ SINGLE_FILE = 1
 
 def run_cat(args, session):
     """Print the contents of the given files, one after another."""
-    paths = _plain_arguments("cat", args)
+    _letters, paths = split_flags("cat", args, "")
     session.require_vfs("cat")
     if not paths:
         raise CommandError("cat: missing file operand")
@@ -49,17 +49,6 @@ def run_tail(args, session):
             body = join_block(f"==> {path} <==", body)
         blocks.append(body)
     return "\n\n".join(blocks)
-
-
-def _plain_arguments(command, args):
-    """Return the file operands, rejecting anything that looks like a flag."""
-    for arg in args:
-        if arg in (DASH, "--") or not arg.startswith(DASH):
-            continue
-        if arg.startswith("--"):
-            raise CommandError(f"{command}: unrecognized option '{arg}'")
-        raise CommandError(f"{command}: invalid option -- '{arg[1]}'")
-    return [arg for arg in args if arg != "--"]
 
 
 def _parse_tail_args(args):

@@ -121,6 +121,41 @@ def resolve(root, cwd_parts, path):
     return tuple(parts), nodes[-1]
 
 
+def split_parent(path):
+    """Split ``path`` into ``(parent path, last name)``.
+
+    A path without a directory part has the working directory (``.``)
+    as its parent; ``/name`` has the root (``/``).
+    """
+    trimmed = path.rstrip(SEPARATOR)
+    head, _separator, name = trimmed.rpartition(SEPARATOR)
+    if head:
+        return head, name
+    anchor = SEPARATOR if trimmed.startswith(SEPARATOR) else CURRENT_NAME
+    return anchor, name
+
+
+def new_directory(name, mtime):
+    """Return an empty directory node stamped with ``mtime``."""
+    return VfsNode(name, is_dir=True, mtime=mtime)
+
+
+def attach(parent, node, mtime):
+    """Put ``node`` into ``parent`` under its own name.
+
+    Replaces any entry with the same name and touches the parent.
+    """
+    parent.children[node.name] = node
+    parent.mtime = mtime
+
+
+def detach(parent, name, mtime):
+    """Remove and return ``parent``'s child ``name``; touch the parent."""
+    node = parent.children.pop(name)
+    parent.mtime = mtime
+    return node
+
+
 def count_entries(node):
     """Return ``(file_count, dir_count)`` for the subtree at node."""
     files = dirs = 0

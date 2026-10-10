@@ -6,6 +6,7 @@ exceptions from ``shellemu.errors`` to signal an error, an exit or a
 screen clear.
 """
 
+from .edit_commands import run_mkdir, run_mv
 from .errors import ClearRequested, CommandError, ExitRequested
 from .file_commands import run_cat, run_tail
 from .nav_commands import run_cd, run_ls
@@ -28,6 +29,8 @@ COMMANDS = {
     "cd": run_cd,
     "cat": run_cat,
     "tail": run_tail,
+    "mkdir": run_mkdir,
+    "mv": run_mv,
     "clear": run_clear,
     "exit": run_exit,
 }

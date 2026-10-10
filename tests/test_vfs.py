@@ -8,11 +8,15 @@ from shellemu.vfs import (
     NotDirectoryError,
     PathNotFoundError,
     VfsError,
+    attach,
     count_entries,
+    detach,
     find_node,
     format_path,
     load_vfs,
+    new_directory,
     resolve,
+    split_parent,
 )
 
 HEADER = "path,type,content\n"
@@ -189,3 +193,31 @@ def test_find_node_and_format_path(tmp_path):
     assert find_node(root, ()) is root
     assert format_path(()) == "/"
     assert format_path(("a", "b")) == "/a/b"
+
+
+def test_split_parent():
+    assert split_parent("a") == (".", "a")
+    assert split_parent("a/b") == ("a", "b")
+    assert split_parent("a/b/") == ("a", "b")
+    assert split_parent("/a") == ("/", "a")
+    assert split_parent("/a/b") == ("/a", "b")
+    assert split_parent("~/a") == ("~", "a")
+
+
+def test_attach_and_detach_edit_the_tree_and_touch_the_parent(tmp_path):
+    root = _small_tree(tmp_path)
+    folder = new_directory("fresh", 42.0)
+    attach(root, folder, 42.0)
+    assert root.children["fresh"] is folder
+    assert root.mtime == 42.0
+    assert folder.mtime == 42.0
+    assert detach(root, "fresh", 99.0) is folder
+    assert "fresh" not in root.children
+    assert root.mtime == 99.0
+
+
+def test_attach_replaces_a_same_named_entry(tmp_path):
+    root = _small_tree(tmp_path)
+    replacement = new_directory("root.txt", 1.0)
+    attach(root, replacement, 1.0)
+    assert root.children["root.txt"] is replacement

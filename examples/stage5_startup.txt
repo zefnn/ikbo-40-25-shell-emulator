@@ -1,0 +1,38 @@
+ls
+mkdir projects
+mkdir reports backups
+ls
+mkdir -p work/2026/october
+ls work/2026
+mkdir -p docs/projects/alpha
+mkdir docs
+mkdir nosuch/inner
+mkdir "My Notes.txt"/x
+mkdir -x
+mkdir
+mv readme.txt projects
+ls projects
+mv projects/readme.txt hello.txt
+cat hello.txt
+mv hello.txt "My Notes.txt"
+cat "My Notes.txt"
+mv reports backups empty
+ls empty
+mv docs/notes.txt docs/long.txt
+ls docs
+mv docs documents
+ls
+cd documents/projects
+mv /documents /archive
+cd ..
+ls
+cd /
+mv archive archive/inner
+mv "My Notes.txt" "My Notes.txt"
+mv "My Notes.txt" archive nosuch
+mv archive "My Notes.txt"
+mv nosuch x
+mv . x
+mv
+mv work
+ls -l

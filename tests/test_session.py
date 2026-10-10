@@ -26,3 +26,31 @@ def test_lookup_message_wording():
     through_file = lookup_message("cat", "x/y", NotDirectoryError("x"))
     assert missing == "cat: x: No such file or directory"
     assert through_file == "cat: x/y: Not a directory"
+
+
+def test_relocate_rebases_the_working_and_previous_directories(session):
+    session.change_dir(("docs", "projects"))
+    session.change_dir(("docs",))
+    session.relocate(("docs",), ("archive",))
+    assert session.cwd == ("archive",)
+    assert session.previous_cwd == ("archive", "projects")
+
+
+def test_relocate_leaves_unrelated_directories_alone(session):
+    session.change_dir(("data",))
+    session.relocate(("docs",), ("archive",))
+    assert session.cwd == ("data",)
+    assert session.previous_cwd == ()
+
+
+def test_relocate_does_not_match_a_sibling_with_a_common_prefix(session):
+    session.change_dir(("docs-old",))
+    session.relocate(("docs",), ("archive",))
+    assert session.cwd == ("docs-old",)
+
+
+def test_relocate_without_a_previous_directory(session):
+    session.cwd = ("docs",)
+    session.relocate(("docs",), ("archive",))
+    assert session.cwd == ("archive",)
+    assert session.previous_cwd is None

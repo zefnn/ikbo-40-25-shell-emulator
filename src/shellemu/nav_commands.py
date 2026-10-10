@@ -4,6 +4,7 @@ import math
 from dataclasses import dataclass
 
 from . import vfs
+from .arguments import DASH, split_flags
 from .errors import CommandError
 from .formatting import (
     BLOCK_BYTES,
@@ -14,7 +15,6 @@ from .formatting import (
 )
 from .session import lookup_message
 
-DASH = "-"
 HIDDEN_PREFIX = "."
 LS_FLAGS = "lha"
 MAX_CD_ARGS = 1
@@ -61,7 +61,8 @@ def run_cd(args, session):
 
 def run_ls(args, session):
     """List directory contents; ``-l``, ``-h`` and ``-a`` combine freely."""
-    options, paths = _parse_ls_args(args)
+    letters, paths = split_flags("ls", args, LS_FLAGS)
+    options = LsOptions("l" in letters, "h" in letters, "a" in letters)
     session.require_vfs("ls")
     targets = paths or [vfs.CURRENT_NAME]
     errors, files, dirs = _collect_targets(session, targets)
@@ -89,32 +90,6 @@ def _resolve_directory(session, target):
     if not node.is_dir:
         raise CommandError(f"cd: not a directory: {target}")
     return parts
-
-
-def _parse_ls_args(args):
-    """Split ls arguments into an ``LsOptions`` and a list of paths."""
-    letters = set()
-    paths = []
-    options_done = False
-    for arg in args:
-        if options_done or arg == DASH or not arg.startswith(DASH):
-            paths.append(arg)
-        elif arg == "--":
-            options_done = True
-        elif arg.startswith("--"):
-            raise CommandError(f"ls: unrecognized option '{arg}'")
-        else:
-            letters.update(_check_flags(arg))
-    options = LsOptions("l" in letters, "h" in letters, "a" in letters)
-    return options, paths
-
-
-def _check_flags(arg):
-    """Return the flag letters in ``arg`` (like ``-lah``), or raise."""
-    for letter in arg[len(DASH):]:
-        if letter not in LS_FLAGS:
-            raise CommandError(f"ls: invalid option -- '{letter}'")
-    return set(arg[len(DASH):])
 
 
 def _collect_targets(session, paths):
