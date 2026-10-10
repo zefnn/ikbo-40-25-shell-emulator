@@ -3,6 +3,7 @@
 from .config import parse_cli_args, resolve_config
 from .eventlog import EventLog
 from .gui import ReplWindow
+from .session import Session
 from .vfs import VfsError, load_vfs
 
 
@@ -20,7 +21,8 @@ def main():
         except VfsError as exc:
             vfs_error = str(exc)
 
-    app = ReplWindow(config, config_error, vfs_root, vfs_error, logger)
+    session = Session(vfs_root)
+    app = ReplWindow(config, config_error, session, vfs_error, logger)
     app.mainloop()
 
 

@@ -13,21 +13,20 @@ DEFAULT_VFS_NAME = "(не задана)"
 class ReplWindow(tk.Tk):
     """Main window: a scrollback pane plus a single input line."""
 
-    def __init__(self, config, config_error, vfs_root, vfs_error, logger):
+    def __init__(self, config, config_error, session, vfs_error, logger):
         """Build the window for the given resolved configuration."""
         super().__init__()
         self._logger = logger
-        self._vfs_root = vfs_root
+        self._session = session
         vfs_name = (
             os.path.basename(config.vfs_path)
             if config.vfs_path
             else DEFAULT_VFS_NAME
         )
         self.title(f"Эмулятор — VFS: {vfs_name}")
-        self._prompt = "VFS:~$ "
         self._build_widgets()
         self._print_startup_info(config, config_error, vfs_error)
-        self._print(self._prompt, newline=False)
+        self._print(self._session.prompt(), newline=False)
         if config.script_path:
             self._run_startup_script(config.script_path)
 
@@ -53,8 +52,8 @@ class ReplWindow(tk.Tk):
             self._print(f"[config] {key} = {value}")
         if config_error:
             self._print(f"config error: {config_error}")
-        if self._vfs_root is not None:
-            files, dirs = vfs.count_entries(self._vfs_root)
+        if self._session.vfs_root is not None:
+            files, dirs = vfs.count_entries(self._session.vfs_root)
             self._print(f"[vfs] loaded: {files} files, {dirs} directories")
         if vfs_error:
             self._print(f"VFS error: {vfs_error}")
@@ -65,7 +64,7 @@ class ReplWindow(tk.Tk):
             lines = Path(path).read_text(encoding="utf-8").splitlines()
         except OSError as exc:
             self._print(f"startup script error: {exc}")
-            self._print(self._prompt, newline=False)
+            self._print(self._session.prompt(), newline=False)
             return
         for line in lines:
             if self._run_one_line(line):
@@ -85,14 +84,22 @@ class ReplWindow(tk.Tk):
         itself once done. Returns True if the window was closed.
         """
         self._print(line)
-        output = repl.submit(line, logger=self._logger)
+        output = repl.submit(line, self._session, logger=self._logger)
         if output is None:
             self.destroy()
             return True
-        if output:
+        if output is repl.CLEAR_SCREEN:
+            self._clear()
+        elif output:
             self._print(output)
-        self._print(self._prompt, newline=False)
+        self._print(self._session.prompt(), newline=False)
         return False
+
+    def _clear(self):
+        """Erase everything shown in the scrollback pane."""
+        self.output.configure(state="normal")
+        self.output.delete("1.0", "end")
+        self.output.configure(state="disabled")
 
     def _print(self, text, newline=True):
         """Append text to the read-only scrollback pane."""

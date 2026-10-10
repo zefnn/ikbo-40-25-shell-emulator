@@ -1,0 +1,42 @@
+ls
+ls -a
+ls -l
+ls -lh
+ls -la
+ls -l -h -a
+ls -hal docs
+ls docs/projects
+ls /docs/projects/alpha
+ls readme.txt docs
+ls -x
+ls --all
+ls nosuch
+cd docs
+ls
+cd projects/alpha
+cd /docs/projects/beta
+cd ../../..
+cd ~
+cd docs/projects
+cd -
+cd
+cd "My Notes.txt"
+cd nosuch
+cd docs projects
+cat readme.txt
+cat docs/notes.txt "My Notes.txt"
+cat docs
+cat nosuch
+cat
+cat -x
+cd docs
+tail long.txt
+tail -n 3 long.txt
+tail -n2 notes.txt
+tail -4 notes.txt
+tail -n 0 notes.txt
+tail notes.txt projects/beta/todo.txt
+tail -n x notes.txt
+tail nosuch
+tail
+ls -lh ../data

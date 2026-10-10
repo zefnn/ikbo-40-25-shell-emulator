@@ -3,6 +3,6 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PYTHONPATH=src python3 -m shellemu \
-    --vfs examples/vfs.csv \
+    --vfs examples/vfs_deep.csv \
     --log examples/shellemu_log.xml \
     --script examples/startup.txt

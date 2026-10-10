@@ -4,7 +4,16 @@ import base64
 
 import pytest
 
-from shellemu.vfs import VfsError, count_entries, load_vfs
+from shellemu.vfs import (
+    NotDirectoryError,
+    PathNotFoundError,
+    VfsError,
+    count_entries,
+    find_node,
+    format_path,
+    load_vfs,
+    resolve,
+)
 
 HEADER = "path,type,content\n"
 
@@ -109,3 +118,74 @@ def test_unknown_type_raises_vfs_error(tmp_path):
 def test_unsafe_paths_raise_vfs_error(tmp_path, bad_path):
     with pytest.raises(VfsError, match="invalid VFS path"):
         load_vfs(str(_write_csv(tmp_path, f"{bad_path},file,\n")))
+
+
+def test_dot_names_are_reserved_for_navigation(tmp_path):
+    for bad_path in ["./x", "a/./b", "a/.."]:
+        with pytest.raises(VfsError, match="invalid VFS path"):
+            load_vfs(str(_write_csv(tmp_path, f"{bad_path},file,\n")))
+
+
+def test_non_utf8_csv_is_a_vfs_error_not_a_crash(tmp_path):
+    csv_path = tmp_path / "vfs.csv"
+    csv_path.write_bytes(b"path,type,content\n\xff\xfe,file,\n")
+    with pytest.raises(VfsError, match="cannot read"):
+        load_vfs(str(csv_path))
+
+
+def test_every_node_is_stamped_with_the_csv_mtime(tmp_path):
+    body = f"a/b.txt,file,{_b64('x')}\nempty,dir,\n"
+    csv_path = _write_csv(tmp_path, body)
+    root = load_vfs(str(csv_path))
+    expected = csv_path.stat().st_mtime
+    assert root.mtime == expected
+    assert root.children["a"].children["b.txt"].mtime == expected
+    assert root.children["empty"].mtime == expected
+
+
+def _small_tree(tmp_path):
+    body = f"a/b/c.txt,file,{_b64('c')}\nroot.txt,file,{_b64('r')}\n"
+    return load_vfs(str(_write_csv(tmp_path, body)))
+
+
+def test_resolve_absolute_relative_and_dotdot(tmp_path):
+    root = _small_tree(tmp_path)
+    assert resolve(root, (), "/a/b")[0] == ("a", "b")
+    assert resolve(root, ("a",), "b/c.txt")[0] == ("a", "b", "c.txt")
+    assert resolve(root, ("a", "b"), "../../root.txt")[0] == ("root.txt",)
+    assert resolve(root, ("a",), "..")[0] == ()
+    assert resolve(root, (), "..")[0] == ()
+
+
+def test_resolve_home_dot_and_extra_slashes(tmp_path):
+    root = _small_tree(tmp_path)
+    assert resolve(root, ("a",), "~")[0] == ()
+    assert resolve(root, ("a",), "~/a/b")[0] == ("a", "b")
+    assert resolve(root, ("a",), ".")[0] == ("a",)
+    assert resolve(root, (), "//a///b/")[0] == ("a", "b")
+
+
+def test_resolve_returns_the_node(tmp_path):
+    root = _small_tree(tmp_path)
+    parts, node = resolve(root, (), "a/b/c.txt")
+    assert not node.is_dir
+    assert node.content == b"c"
+    assert resolve(root, (), "/")[1] is root
+
+
+def test_resolve_failures_are_distinguished(tmp_path):
+    root = _small_tree(tmp_path)
+    with pytest.raises(PathNotFoundError):
+        resolve(root, (), "a/nosuch")
+    with pytest.raises(NotDirectoryError):
+        resolve(root, (), "root.txt/x")
+    with pytest.raises(PathNotFoundError):
+        resolve(root, (), "nosuch/..")
+
+
+def test_find_node_and_format_path(tmp_path):
+    root = _small_tree(tmp_path)
+    assert find_node(root, ("a", "b")).is_dir
+    assert find_node(root, ()) is root
+    assert format_path(()) == "/"
+    assert format_path(("a", "b")) == "/a/b"

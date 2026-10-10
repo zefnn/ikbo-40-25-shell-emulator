@@ -16,32 +16,50 @@ import io
 from pathlib import Path
 
 REQUIRED_FIELDS = ["path", "type", "content"]
+CURRENT_NAME = "."
+PARENT_NAME = ".."
+HOME_TOKEN = "~"
+SEPARATOR = "/"
+SKIPPED_SEGMENTS = ("", CURRENT_NAME)
 
 
 class VfsError(Exception):
     """Raised when a VFS file cannot be read or is not well-formed."""
 
 
+class PathNotFoundError(VfsError):
+    """Raised when a path names an entry that does not exist."""
+
+
+class NotDirectoryError(VfsError):
+    """Raised when a path goes through a file as if it were a folder."""
+
+
 class VfsNode:
     """One file or directory in the in-memory VFS tree."""
 
-    def __init__(self, name, is_dir, content=b""):
+    def __init__(self, name, is_dir, content=b"", mtime=0.0):
+        """Create a node; folders get a children dict, files get None."""
         self.name = name
         self.is_dir = is_dir
         self.content = content
+        self.mtime = mtime
         self.children = {} if is_dir else None
 
 
 def load_vfs(path):
     """Parse a CSV-described VFS into an in-memory tree.
 
-    Returns the root ``VfsNode`` (a directory). Raises ``VfsError``
-    if the file cannot be read, its header does not match, or any
-    row describes an invalid or conflicting entry.
+    Returns the root ``VfsNode`` (a directory). Every node is stamped
+    with the CSV file's modification time. Raises ``VfsError`` if the
+    file cannot be read, its header does not match, or any row
+    describes an invalid or conflicting entry.
     """
     try:
-        text = Path(path).read_text(encoding="utf-8")
-    except OSError as exc:
+        source = Path(path)
+        text = source.read_text(encoding="utf-8")
+        mtime = source.stat().st_mtime
+    except (OSError, UnicodeDecodeError) as exc:
         raise VfsError(f"cannot read VFS file: {exc}") from exc
 
     reader = csv.DictReader(io.StringIO(text))
@@ -54,7 +72,53 @@ def load_vfs(path):
     seen_paths = set()
     for row in reader:
         _add_entry(root, row, seen_paths)
+    _stamp(root, mtime)
     return root
+
+
+def format_path(parts):
+    """Render path components as an absolute path, e.g. ``/docs/a``."""
+    return SEPARATOR + SEPARATOR.join(parts)
+
+
+def find_node(root, parts):
+    """Return the node at the exact component list ``parts``.
+
+    Raises ``PathNotFoundError`` or ``NotDirectoryError``.
+    """
+    node = root
+    for part in parts:
+        node = _child(node, part)
+    return node
+
+
+def resolve(root, cwd_parts, path):
+    """Resolve a user-typed path to a ``(parts, node)`` pair.
+
+    ``path`` may be absolute (``/a/b``), home-relative (``~`` or
+    ``~/a``; the VFS root plays the role of home) or relative to
+    ``cwd_parts``. ``.`` is skipped, ``..`` steps to the parent (and
+    stays put at the root), repeated slashes collapse. Raises
+    ``PathNotFoundError`` or ``NotDirectoryError`` as the walk fails.
+    """
+    if path == HOME_TOKEN or path.startswith(HOME_TOKEN + SEPARATOR):
+        segments = path[len(HOME_TOKEN):].split(SEPARATOR)
+    elif path.startswith(SEPARATOR):
+        segments = path.split(SEPARATOR)
+    else:
+        segments = [*cwd_parts, *path.split(SEPARATOR)]
+
+    parts = []
+    nodes = [root]
+    for segment in segments:
+        if segment == PARENT_NAME:
+            if parts:
+                parts.pop()
+                nodes.pop()
+        elif segment not in SKIPPED_SEGMENTS:
+            nodes.append(_child(nodes[-1], segment))
+            parts.append(segment)
+    return tuple(parts), nodes[-1]
 
 
 def count_entries(node):
@@ -71,12 +135,35 @@ def count_entries(node):
     return files, dirs
 
 
+def _child(node, name):
+    """Return the named child of a directory node, or raise."""
+    if not node.is_dir:
+        raise NotDirectoryError(name)
+    child = node.children.get(name)
+    if child is None:
+        raise PathNotFoundError(name)
+    return child
+
+
+def _stamp(node, mtime):
+    """Set the modification time of ``node`` and everything under it."""
+    node.mtime = mtime
+    if node.is_dir:
+        for child in node.children.values():
+            _stamp(child, mtime)
+
+
 def _split_path(path):
-    """Split a VFS path into safe components, or raise VfsError."""
-    if not path or path.startswith("/") or path.endswith("/"):
+    """Split a VFS path into safe components, or raise VfsError.
+
+    The names ``.`` and ``..`` are reserved for navigation, so they
+    cannot be used as the name of a real entry.
+    """
+    if not path or path.startswith(SEPARATOR) or path.endswith(SEPARATOR):
         raise VfsError(f"invalid VFS path: {path!r}")
-    parts = path.split("/")
-    if any(not part or part == ".." for part in parts):
+    parts = path.split(SEPARATOR)
+    reserved = (CURRENT_NAME, PARENT_NAME)
+    if any(not part or part in reserved for part in parts):
         raise VfsError(f"invalid VFS path: {path!r}")
     return parts
 
