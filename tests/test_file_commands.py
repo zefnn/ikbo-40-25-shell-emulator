@@ -3,7 +3,7 @@
 import pytest
 
 from shellemu.errors import CommandError
-from shellemu.file_commands import run_cat, run_tail
+from shellemu.file_commands import DEFAULT_TAIL_LINES, run_cat, run_tail
 from shellemu.nav_commands import run_cd
 from shellemu.session import Session
 
@@ -68,7 +68,7 @@ def test_tail_defaults_to_ten_lines(session):
     lines = run_tail(["docs/long.txt"], session).split("\n")
     assert lines[0] == "line 6"
     assert lines[-1] == "line 15"
-    assert len(lines) == 10
+    assert len(lines) == DEFAULT_TAIL_LINES
 
 
 @pytest.mark.parametrize("flags", [["-n", "3"], ["-n3"], ["-3"]])
