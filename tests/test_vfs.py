@@ -20,6 +20,8 @@ from shellemu.vfs import (
 )
 
 HEADER = "path,type,content\n"
+ATTACH_TIME = 42.0
+DETACH_TIME = 99.0
 
 
 def _write_csv(tmp_path, body):
@@ -206,14 +208,14 @@ def test_split_parent():
 
 def test_attach_and_detach_edit_the_tree_and_touch_the_parent(tmp_path):
     root = _small_tree(tmp_path)
-    folder = new_directory("fresh", 42.0)
-    attach(root, folder, 42.0)
+    folder = new_directory("fresh", ATTACH_TIME)
+    attach(root, folder, ATTACH_TIME)
     assert root.children["fresh"] is folder
-    assert root.mtime == 42.0
-    assert folder.mtime == 42.0
-    assert detach(root, "fresh", 99.0) is folder
+    assert root.mtime == ATTACH_TIME
+    assert folder.mtime == ATTACH_TIME
+    assert detach(root, "fresh", DETACH_TIME) is folder
     assert "fresh" not in root.children
-    assert root.mtime == 99.0
+    assert root.mtime == DETACH_TIME
 
 
 def test_attach_replaces_a_same_named_entry(tmp_path):
